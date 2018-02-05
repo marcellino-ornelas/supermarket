@@ -5,17 +5,28 @@
     interpolate: /\{\{(.+?)\}\}/g
   };
 
+  //  jquery extends
+
+  $.fn.extend({
+    toggleShortcut:function(){
+      console.log(this);
+      this.toggle();
+      this.next().toggle();
+    }
+  })
+
   // Item constructor
-  function Item($element){
+  function Item($element,$shortcut){
     this.name = $element.children(".item-name").text().trim();
     this.price = parseFloat( $element.attr("data-price"), 10);
+    this.$node = $element
+    this.$shortcut = $element.find(".shortcut-cart");
   };
 
   Item.prototype.toElement = (function(){
     // USE UNDERSCORES TEMPLATE FUNCTION
     const templateScope = {variable:"data"};
-    const listTemplate = _.template( $("#cartItem").html(), templateScope);
-
+    const listTemplate = _.template( $("#cartItemTemplate").text(), templateScope);
     return (function(quantity,index){
       /*
        * USE TEMPLATE AND PLUG IN DATA
@@ -37,73 +48,80 @@
     this.total = 0;
   }
 
-  Cart.prototype.updateDisplay = function() {
-    // assign <this> keyword to a variable
-    // in order to be used in inner function
-    // if this step is skipped <this> keyword will change
-    // when executing map function
-    const me = this;
-    // for now loop threw whole array
-    var elementList = me.shoppingList.map(function(item){
-      let {quantity, index} = me.tracker[item.name];
-      return item.toElement(quantity,index);
-    });
-
-    env.shoppingCart.html(elementList);
-
-    env.checkOutButton.removeAttr("disabled");
-
-    return me;
-  };
-
   Cart.prototype.addToCart = function( item ){
-
-    if(this.tracker.hasOwnProperty(item.name) ){
+    let me = this
+    if(me.tracker.hasOwnProperty(item.name) ){
       /*
        * if item is in shopping cart already
        * add to quantity and dont add same item again
       */
-      this.tracker[ item.name ].quantity++
+      me.tracker[ item.name ].quantity++
     } else {
 
       // (length of array) minus (1)
       //  to get index of item
-      var index = (this.shoppingList.push( item )) - 1;
+      var index = (me.shoppingList.push( item )) - 1;
 
       // add item to tracker to eliminate
       // looping through shopping list every time
-      this.tracker[ item.name ] = {
+      me.tracker[ item.name ] = {
         index: index,
         quantity: 1
       };
     }
 
-    return this.updateDisplay();
+    // add to the total
+    me.total += item.price
+
+    let cartItem =  item.toElement(1,index);
+
+    item.$shortcut.append(cartItem);
+
+    env.shoppingCart.append( cartItem );
 
   };
 
-  Cart.prototype.changeQuantity = function(name, quantity){
-    this.tracker[name].quantity = quantity
+  Cart.prototype.getItem = function(itemName){
+    let itemIndex = this.tracker[itemName].index;
+
+    return this.shoppingList[itemIndex];
+  }
+
+  Cart.prototype.updateQuantity = function(name, quantity){
+    let itemInfo = this.tracker[name];
+    let itemPrice = this.getItem(name).price;
+    let newQuantity =  quantity < itemInfo.quantity ? -itemPrice : itemPrice;
+
+    this.total += newQuantity
+    itemInfo.quantity = quantity;
   }
 
   Cart.prototype.removeItem = function(name){
-    debugger;
-    let index = this.tracker[name].index;
+    // debugger;
+    let itemTracker = this.tracker[name]
+
+    let index = itemTracker.index;
 
     // take out item from shopping list
-    var deletedItem = this.shoppingList.splice(index,1);
+    var deletedItem = this.shoppingList.splice(index,1)[0];
+
+    // take out shortcut
+    deletedItem.$shortcut.prev().toggleShortcut();
+
+    // minus from total
+    this.total -= deletedItem.price * itemTracker.quantity;
+
+    $("[data-name='" + deletedItem.name + "']").remove();
+
+    deletedItem.$shortcut.html("");
 
     // delete tracker information
     delete this.tracker[ name ];
-
-    this.updateDisplay();
   };
 
-  Cart.prototype.finalize = function() {
-    return this.shoppingList.reduce(function(acc,value){
-      return acc + value.price;
-    },0)
-  };
+  // Cart.prototype. = function() {
+    // return
+  // };
 
   const env = {
     salesTax: false,
@@ -112,8 +130,56 @@
     cart: new Cart(),
     categorySelectors: $("#categorySelectors"),
     categoryItem: $("[data-category]"),
-    checkOutButton: $("#checkOut")
+    checkOutButton: $("#checkOut"),
+    total:$('.total'),
+    updateTotal: function(){
+      env.total.text(`total: $${env.cart.total}`);
+    },
+    newCartItem: function(event){
+      let target = event.target;
+      let $target = $(target);
+
+      // if no items are in shopping cart
+      // or if the li was clicked and not its children
+      // then break out of the function
+      if(!env.cart.shoppingList.length || $target.is('tr') ){ return; }
+
+      // get the parent of this shopping cart list item
+      let $parent = $target.parents('.cart-item');
+      let itemName = $parent.attr("data-name");
+      let item = env.cart.getItem(itemName);
+
+      switch(target.nodeName){
+        case 'INPUT':
+          let newQuantity = parseInt($target.val());
+
+          // no change in quantity
+          if( newQuantity === env.cart.tracker[ itemName ].quantity ){ return; }
+
+          // IF QUANTITY IS BELOW 0
+          if(newQuantity <= 0){
+            console.log("zero items");
+            env.cart.removeItem(itemName);
+
+          } else {
+
+            env.cart.updateQuantity( itemName, newQuantity );
+            $("[data-name='" + itemName +"']").find("input[type='number']").val(newQuantity);
+
+          }
+
+          break;
+        case 'I':
+          // add to cart button
+          env.cart.removeItem(itemName);
+          break;
+      }
+
+      env.updateTotal();
+
+    }
   };
+
 
 
   /*
@@ -122,43 +188,23 @@
 
   env.content.on("click",".item-button",function(event){
     // WHEN ADD TO CART BUTTON IS PRESSED
-    var content = $(this).parent('.content-item');
+    var $me = $(this);
 
-    var contentItem = new Item(content);
+    $me.toggleShortcut();
+
+    var $content = $me.parents('.content-item');
+    var contentItem = new Item($content);
 
     env.cart.addToCart(contentItem);
+    env.updateTotal();
   });
 
 
 
-  env.shoppingCart.on("click",function(event){
-    let target = event.target;
-    let $target = $(target);
-
-    // if no items are in shopping cart
-    // or if the li was clicked and not its children
-    // then break out of the function
-    if(!env.cart.shoppingList || $target.is('li') ){ return; }
-
-    // get the parent of this shopping cart list item
-    let $parent = $target.parents('li');
-
-    let itemName = $parent.attr("data-name");
-
-    switch(target.nodeName){
-      case 'INPUT':
-        let NewQuantity = parseInt($target.val());
-
-        (NewQuantity <= 0) ? env.cart.removeItem(itemName) : env.cart.changeQuantity( itemName, NewQuantity );
-        break;
-      case 'I':
-        env.cart.removeItem(itemName);
-        break;
-      default:
-        return;
-    }
-
-  });
+  env.shoppingCart.on("click", env.newCartItem);
+  env.content.on("click",".shortcut-cart",function(event){
+    env.newCartItem(event);
+  })
 
 
   env.categorySelectors.on("click",function(event){
@@ -181,8 +227,9 @@
 
 
     if(env.content.is(":hidden")){
+
       env.content.show();
-      env.shoppingCart.hide();
+      env.shoppingCart.parents("section").hide();
 
     }
 
@@ -193,7 +240,7 @@
     let $this = $(this);
     if( $this.is(":disabled") ){ return; }
 
-    env.shoppingCart.show();
+    env.shoppingCart.parents("section").show();
     env.content.hide();
 
   });

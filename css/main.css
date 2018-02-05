@@ -24,6 +24,8 @@
 /* BASE STYLES
 /*******************************************/
 
+html,body,main{ height: 100% }
+
 body {
   font-size: 26px;
   line-height: 1.4;
@@ -42,8 +44,7 @@ h2{ font-size: 1.7em; }
 h3{ font-size: 1.5em; }
 h4{ font-size: 1.3em; }
 h5{ font-size: 1.1em; }
-h6{ font-size: 1em; }
-p { font-size: 1em; }
+h6,button, input, p { font-size: 1em; }
 
 a,i{
   text-decoration: none;
@@ -58,7 +59,15 @@ ul{
 img{
   width: 100%;
   max-height: 300px;
+}
 
+input[type="number"]{
+  border:0;
+  text-align: center;
+}
+
+table{
+  width: 100%
 }
 
 
@@ -69,11 +78,24 @@ img{
 #content{
   flex-wrap: wrap;
   justify-content: center;
+  overflow-y: scroll;
 }
+
 
 aside{
   background-color: lightgrey;
+  border-right: 1px black solid;
 }
+
+aside div{
+  text-align: center;
+}
+
+#checkOut{
+  border:0;
+  background-color: #28a745;
+}
+
 /******************************************
 /* ADDITIONAL STYLES
 /*******************************************/
@@ -123,6 +145,11 @@ aside{
   height: 100%;
 }
 
+
+.vertical-center{
+  align-items: center;
+}
+
 /* ONLY FOR MOBILE */
 .only-mobile{
   display:none;
@@ -134,27 +161,29 @@ aside{
   display: inline-block;
 }
 
-.content-item > .item-name{
+.content-item .item-name{
   margin: 0.5em 0;
 }
 
-.content-item > .item-img{
+.content-item .item-img{
   height: 300px;
 }
 
-.content-item > .item-button{
+.content-item .item-button{
   background-color: #28a745;
-  width: 100%;
+}
+
+.content-item::first-letter{
+  text-transform: uppercase;
+}
+
+.btn{
   text-align: center;
   padding: 1%;
   font-size: 1.3em;
   color: #FFF;
   border-radius: 10px;
   cursor: pointer;
-}
-
-.content-item::first-letter{
-  text-transform: uppercase;
 }
 
 
@@ -175,6 +204,61 @@ aside{
 [disabled]{
   cursor: none;
 }
+
+.main-display{
+  width: 60%;
+}
+
+/*
+ * Cart
+*/
+/*
+.cart-item{
+  justify-content: space-around;
+}
+
+
+.cart-cancel{
+  color: red;
+}
+
+.cart-cancel,
+.cart-quantity{
+  flex: 0 1 20%;
+}
+
+.cart-name{
+  flex: 1 1 auto;
+  text-align: center;
+}
+*/
+table{
+  text-align: center;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+.cart tr{
+  height: 50px;
+  font-size: 1em;
+}
+
+.cart thead tr,
+.cart tbody tr{
+  border-bottom: 1px solid black;
+}
+
+.cart-quantity{
+  font-size: 1em;
+}
+
+
+.shortcut-cart .cart-name,
+.shortcut-cart .cart-price{
+  display:none;
+}
+
+
 
 /******************************************
 /* MEDIA QUERYS
